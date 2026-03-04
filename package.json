@@ -1,0 +1,15 @@
+{
+  "name": "qlscripts",
+  "version": "1.0.0",
+  "description": "青龙面板自用脚本集合",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xifan2333/qlscripts.git"
+  },
+  "author": "xifan2333",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "latest",
+    "crypto-js": "latest"
+  }
+}
