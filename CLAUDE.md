@@ -8,19 +8,21 @@
 
 ```
 qlscripts/
-├── ql_*.js / ql_*.ts / ql_*.py / ql_*.sh   # 脚本（根目录，ql_ 前缀）
-├── utils/                                     # 共享工具模块（非任务文件）
-├── package.json                               # Node.js 依赖
-├── requirements.txt                           # Python 依赖
-└── README.md                                  # 订阅说明与脚本列表
+├── *.js / *.ts / *.py / *.sh   # 脚本（根目录）
+├── config/    # 配置目录
+│   └── <脚本名>_config.<ext>    # 配置示例文件
+├── utils/    # 共享工具模块（非任务文件）
+├── package.json    # Node.js 依赖
+├── requirements.txt # Python 依赖
+└── README.md    # 订阅说明与脚本列表
 ```
 
 ## 脚本规范
 
 ### 命名
 
-- 所有脚本使用 `ql_` 前缀：`ql_<平台>_<功能>.js`
-- 示例：`ql_bilibili_signin.js`、`ql_alipan_checkin.py`
+- 所有脚本使用 `<平台>_<功能>.js`
+- 示例：`bilibili_signin.js`、`anyrouter_checkin.py`
 
 ### 头部元数据（必须）
 
@@ -113,3 +115,4 @@ if __name__ == "__main__":
 4. **定时**：避免整点集中，使用随机偏移（如 `:15`、`:37`）
 5. **依赖**：Node.js 依赖写入 `package.json`，Python 依赖写入 `requirements.txt`
 6. **工具模块**：放入 `utils/` 目录，通过订阅命令的 dependence 参数同步
+7. **配置文件**：配置示例统一放入 `config/` 目录，命名为 `<脚本名>_config.<ext>`（如 `gpt_autopool_config.json`）。

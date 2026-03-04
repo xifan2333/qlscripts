@@ -88,7 +88,7 @@ def load_json(path: Path) -> Dict[str, Any]:
 
 
 def setup_logger() -> logging.Logger:
-    logger = logging.getLogger("pool_maintainer")
+    logger = logging.getLogger("gpt_autopool")
     logger.setLevel(logging.INFO)
     logger.handlers.clear()
 
@@ -1960,16 +1960,16 @@ def run_clean_401(conf: Dict[str, Any], logger: logging.Logger) -> tuple[int, in
 
 
 def load_config() -> Dict[str, Any]:
-    """从环境变量 POOL_MAINTAINER_CONFIG 加载配置（JSON 字符串或文件路径），
-    若未设置则回退到脚本同目录下的 config.json。"""
-    raw = os.getenv("POOL_MAINTAINER_CONFIG", "").strip()
+    """从环境变量 GPT_POOL_CONFIG 加载配置（JSON 字符串或文件路径），
+    若未设置则回退到脚本同目录下的 config/gpt_pool_config.json 文件，最后回退到默认空配置。"""
+    raw = os.getenv("GPT_POOL_CONFIG", "").strip()
     if raw:
         if raw.startswith("{"):
             return json.loads(raw)
         path = Path(raw).resolve()
         if path.exists():
             return load_json(path)
-    default_cfg = Path(__file__).resolve().parent / "config.json"
+    default_cfg = Path(__file__).resolve().parent / "config" / "gpt_autopool_config.json"
     if default_cfg.exists():
         return load_json(default_cfg)
     return {}
@@ -1991,7 +1991,7 @@ def main() -> int:
 
     conf = load_config()
     if not conf:
-        msg = "配置为空，请设置环境变量 POOL_MAINTAINER_CONFIG（JSON 字符串或文件路径）"
+        msg = "配置为空，请设置环境变量 GPT_POOL_CONFIG（JSON 字符串或文件路径）"
         logger.error(msg)
         send_notify("账号池维护失败", msg)
         return 2
