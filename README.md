@@ -5,26 +5,27 @@
 ## 订阅
 
 ```bash
-ql repo https://github.com/xifan2333/qlscripts.git "ql_" "backup|deprecated" "utils" "main" "js|ts|py|sh"
+ql repo https://github.com/xifan2333/qlscripts.git "" "backup|deprecated" "utils" "main" "js|ts|py|sh"
 ```
 
 ## 脚本列表
 
 | 脚本 | 说明 | 定时 | 环境变量 |
 |------|------|------|----------|
-| ql_pool_maintainer.py | 账号池自动维护（清理401 + 补号） | `37 */4 * * *` | `POOL_MAINTAINER_CONFIG` |
+| gpt_autopool.py | 账号池自动维护（清理401 + 补号） | `0 2 * * *` | `GPT_POOL_CONFIG`、`POOL_MIN_CANDIDATES`、`POOL_TIMEOUT` |
+| anyrouter_checkin.py | AnyRouter 自动签到（支持多账号） | `0 8 * * *` | `ANYROUTER_CONFIG` |
 
 ## 环境变量说明
 
-### ql_pool_maintainer.py
+### gpt_autopool.py
 
 | 变量名 | 必填 | 说明 |
 |--------|------|------|
-| `POOL_MAINTAINER_CONFIG` | 是 | JSON 配置字符串或配置文件路径 |
+| `GPT_POOL_CONFIG` | 是 | JSON 配置字符串（仅支持 JSON 字符串，不支持文件路径） |
 | `POOL_MIN_CANDIDATES` | 否 | 覆盖配置中的最小候选账号阈值 |
 | `POOL_TIMEOUT` | 否 | 接口超时秒数，默认 15 |
 
-`POOL_MAINTAINER_CONFIG` 示例值（JSON 字符串）：
+`GPT_POOL_CONFIG` 示例值（JSON 字符串）：
 
 ```json
 {
@@ -60,6 +61,24 @@ ql repo https://github.com/xifan2333/qlscripts.git "ql_" "backup|deprecated" "ut
 }
 ```
 
-## 依赖
+### anyrouter_checkin.py
+
+| 变量名 | 必填 | 说明 |
+|--------|------|------|
+| `ANYROUTER_CONFIG` | 是 | JSON 配置字符串，包含 `base_url` 与 `accounts` |
+
+`ANYROUTER_CONFIG` 示例：
+
+```json
+{
+  "base_url": "https://blog.zhx47.top/anyrouter",
+  "accounts": [
+    {
+      "name": "xifan",
+      "cookie": "session=xxxx;"
+    }
+  ]
+}
+```
 
 Node.js 依赖会在订阅时自动安装（`package.json`）。Python 依赖需手动安装或通过面板依赖管理安装（`requirements.txt`）。

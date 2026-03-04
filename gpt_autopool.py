@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# cron 37 */4 * * *
+# cron 0 2 * * *
 # const $ = new Env('账号池自动维护')
 
 from __future__ import annotations
@@ -22,7 +22,6 @@ import threading
 import time
 import uuid
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
@@ -75,16 +74,6 @@ NAVIGATE_HEADERS = {
     "sec-fetch-user": "?1",
     "upgrade-insecure-requests": "1",
 }
-
-
-def load_json(path: Path) -> Dict[str, Any]:
-    if not path.exists():
-        return {}
-    with path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data, dict):
-        raise RuntimeError(f"配置文件格式错误，顶层必须是对象: {path}")
-    return data
 
 
 def setup_logger() -> logging.Logger:
@@ -1960,19 +1949,13 @@ def run_clean_401(conf: Dict[str, Any], logger: logging.Logger) -> tuple[int, in
 
 
 def load_config() -> Dict[str, Any]:
-    """从环境变量 GPT_POOL_CONFIG 加载配置（JSON 字符串或文件路径），
-    若未设置则回退到脚本同目录下的 config/gpt_pool_config.json 文件，最后回退到默认空配置。"""
+    """仅从环境变量 GPT_POOL_CONFIG 加载配置（JSON 字符串）。"""
     raw = os.getenv("GPT_POOL_CONFIG", "").strip()
-    if raw:
-        if raw.startswith("{"):
-            return json.loads(raw)
-        path = Path(raw).resolve()
-        if path.exists():
-            return load_json(path)
-    default_cfg = Path(__file__).resolve().parent / "config" / "gpt_autopool_config.json"
-    if default_cfg.exists():
-        return load_json(default_cfg)
-    return {}
+    if not raw:
+        return {}
+    if not raw.startswith("{"):
+        raise RuntimeError("GPT_POOL_CONFIG 必须为 JSON 字符串")
+    return json.loads(raw)
 
 
 def send_notify(title: str, content: str) -> None:
