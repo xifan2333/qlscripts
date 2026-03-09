@@ -5,7 +5,7 @@
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
@@ -16,13 +16,9 @@ except ImportError:
 
 
 def load_config() -> Dict[str, Any]:
-    """加载 JSON 配置"""
     raw = os.getenv("NEWAPI_CONFIG", "").strip()
     if not raw:
         raise RuntimeError("未设置 NEWAPI_CONFIG 环境变量")
-
-    if not raw.startswith("{"):
-        raise RuntimeError("NEWAPI_CONFIG 必须为 JSON 字符串")
 
     try:
         data = json.loads(raw)
@@ -35,7 +31,6 @@ def load_config() -> Dict[str, Any]:
 
 
 def parse_accounts(items: Any) -> List[Dict[str, str]]:
-    """解析账号列表"""
     accounts: List[Dict[str, str]] = []
     if not isinstance(items, list):
         return accounts
@@ -45,56 +40,60 @@ def parse_accounts(items: Any) -> List[Dict[str, str]]:
             continue
         name = str(item.get("name") or f"账号{idx}").strip() or f"账号{idx}"
         url = str(item.get("url") or "").strip()
-        session = str(item.get("session") or "").strip()
+        user_id = str(item.get("user_id") or "").strip()
+        access_token = str(item.get("access_token") or "").strip()
 
-        if url and session:
-            accounts.append({"name": name, "url": url, "session": session})
+        if not url or not user_id or not access_token:
+            print(f"账号{idx} ({name}): 缺少 url/user_id/access_token，跳过")
+            continue
+
+        accounts.append({
+            "name": name,
+            "url": url,
+            "user_id": user_id,
+            "access_token": access_token,
+        })
     return accounts
 
 
-def checkin(session: requests.Session, base_url: str, session_cookie: str) -> tuple[bool, str, Optional[int]]:
-    """执行签到"""
+def checkin(sess: requests.Session, base_url: str, user_id: str, access_token: str) -> Tuple[bool, str, Optional[int]]:
     url = f"{base_url.rstrip('/')}/api/user/checkin"
-    cookies = {"session": session_cookie}
+    headers = {
+        "new-api-user": user_id,
+        "Authorization": f"Bearer {access_token}",
+    }
 
     try:
-        resp = session.post(url, cookies=cookies, timeout=30)
+        resp = sess.post(url, headers=headers, timeout=30)
     except requests.RequestException as e:
         return False, f"请求异常: {e}", None
-
-    if resp.status_code == 401:
-        return False, "Session 已过期(401)，请更新", None
-    if resp.status_code != 200:
-        return False, f"签到失败 HTTP {resp.status_code}: {resp.text[:200]}", None
 
     try:
         data = resp.json()
     except Exception:
-        return False, f"响应非 JSON: {resp.text[:200]}", None
+        return False, f"HTTP {resp.status_code} 响应非 JSON: {resp.text[:200]}", None
 
-    if isinstance(data, dict):
-        success = data.get("success")
-        message = str(data.get("message") or "").strip()
-        quota = None
+    success = data.get("success")
+    message = str(data.get("message") or "").strip()
 
-        if success is True:
-            checkin_data = data.get("data", {})
-            quota = checkin_data.get("quota_awarded")
-            return True, message or "签到成功", quota
-        if success is False:
-            return False, message or f"签到失败: {data}", None
+    if success is True:
+        checkin_data = data.get("data") or {}
+        quota = checkin_data.get("quota_awarded")
+        return True, message or "签到成功", quota
 
-    return False, f"未知响应: {data}", None
+    if "已签到" in message:
+        return True, message, None
+
+    return False, message or f"签到失败: {data}", None
 
 
 def format_quota(quota: Optional[int]) -> str:
-    """格式化额度显示"""
     if quota is None:
         return ""
     if quota >= 1000000:
-        return f"{quota / 1000000:.2f}M ({quota:,} tokens)"
+        return f"${quota / 500000:.2f} ({quota:,} tokens)"
     if quota >= 1000:
-        return f"{quota / 1000:.2f}K ({quota:,} tokens)"
+        return f"${quota / 500000:.4f} ({quota:,} tokens)"
     return f"{quota:,} tokens"
 
 
@@ -108,12 +107,12 @@ def main() -> None:
     accounts = parse_accounts(config.get("accounts"))
 
     if not accounts:
-        print("NEWAPI_CONFIG 未配置有效 accounts")
+        print("NEWAPI_CONFIG 未配置有效 accounts（需要 url + user_id + access_token）")
         return
 
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    sess = requests.Session()
+    sess.headers.update({
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
     })
 
@@ -125,22 +124,17 @@ def main() -> None:
 
     for i, account in enumerate(accounts, start=1):
         name = account["name"]
-        url = account["url"]
-        session_cookie = account["session"]
-
-        ok, msg, quota = checkin(session, url, session_cookie)
+        ok, msg, quota = checkin(sess, account["url"], account["user_id"], account["access_token"])
         if ok:
             ok_count += 1
             quota_str = format_quota(quota)
             detail = f"{msg} +{quota_str}" if quota_str else msg
             line = f"[{i}/{len(accounts)}] {name}: 成功 - {detail}"
-            print(line)
-            lines.append(line)
         else:
             fail_count += 1
             line = f"[{i}/{len(accounts)}] {name}: 失败 - {msg}"
-            print(line)
-            lines.append(line)
+        print(line)
+        lines.append(line)
 
     summary = f"NewAPI 签到完成: 成功 {ok_count}, 失败 {fail_count}"
     print(summary)
