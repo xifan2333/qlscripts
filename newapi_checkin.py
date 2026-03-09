@@ -30,29 +30,32 @@ def load_config() -> Dict[str, Any]:
     return data
 
 
-def parse_accounts(items: Any) -> List[Dict[str, str]]:
+def parse_accounts(config: Dict[str, Any]) -> List[Dict[str, str]]:
+    items = config.get("accounts", {}).get("accounts", [])
     accounts: List[Dict[str, str]] = []
-    if not isinstance(items, list):
-        return accounts
 
-    for idx, item in enumerate(items, start=1):
-        if not isinstance(item, dict):
+    for item in items:
+        if not isinstance(item, dict) or item.get("disabled"):
             continue
-        name = str(item.get("name") or f"账号{idx}").strip() or f"账号{idx}"
-        url = str(item.get("url") or "").strip()
-        user_id = str(item.get("user_id") or "").strip()
-        access_token = str(item.get("access_token") or "").strip()
-
-        if not url or not user_id or not access_token:
-            print(f"账号{idx} ({name}): 缺少 url/user_id/access_token，跳过")
+        if (item.get("site_type") or "").lower() != "new-api":
+            continue
+        health = item.get("health") or {}
+        if "access token 无效" in str(health.get("reason") or ""):
             continue
 
-        accounts.append({
-            "name": name,
-            "url": url,
-            "user_id": user_id,
-            "access_token": access_token,
-        })
+        info = item.get("account_info") or {}
+        url = str(item.get("site_url") or "").strip()
+        user_id = info.get("id")
+        access_token = str(info.get("access_token") or "").strip()
+        name = str(item.get("site_name") or url).strip()
+
+        if url and user_id and access_token:
+            accounts.append({
+                "name": name,
+                "url": url,
+                "user_id": str(user_id),
+                "access_token": access_token,
+            })
     return accounts
 
 
@@ -104,10 +107,10 @@ def main() -> None:
         print(str(e))
         return
 
-    accounts = parse_accounts(config.get("accounts"))
+    accounts = parse_accounts(config)
 
     if not accounts:
-        print("NEWAPI_CONFIG 未配置有效 accounts（需要 url + user_id + access_token）")
+        print("NEWAPI_CONFIG 未找到有效的 new-api 类型账号")
         return
 
     sess = requests.Session()
