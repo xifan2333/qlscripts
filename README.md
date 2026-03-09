@@ -14,6 +14,7 @@ ql repo https://github.com/xifan2333/qlscripts.git "" "backup|deprecated" "utils
 |------|------|------|----------|
 | gpt_autopool.py | 账号池自动维护（清理401 + 补号） | `0 2 * * *` | `GPT_POOL_CONFIG`、`POOL_MIN_CANDIDATES`、`POOL_TIMEOUT` |
 | anyrouter_checkin.py | AnyRouter 自动签到（支持多账号） | `0 8 * * *` | `ANYROUTER_CONFIG` |
+| newapi_checkin.py | NewAPI 自动签到（支持多账号） | `0 9 * * *` | `NEWAPI_CONFIG` |
 
 ## 环境变量说明
 
@@ -76,6 +77,31 @@ ql repo https://github.com/xifan2333/qlscripts.git "" "backup|deprecated" "utils
     {
       "name": "xifan",
       "cookie": "session=xxxx;"
+    }
+  ]
+}
+```
+
+### newapi_checkin.py
+
+| 变量名 | 必填 | 说明 |
+|--------|------|------|
+| `NEWAPI_CONFIG` | 是 | JSON 配置字符串，包含 `accounts` 列表 |
+
+`NEWAPI_CONFIG` 示例：
+
+```json
+{
+  "accounts": [
+    {
+      "name": "主账号",
+      "url": "https://api.example.com",
+      "session": "your_session_cookie_here"
+    },
+    {
+      "name": "备用账号",
+      "url": "https://api2.example.com",
+      "session": "another_session_cookie"
     }
   ]
 }
